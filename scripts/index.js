@@ -606,7 +606,7 @@
     placements.sort((a, b) => a.rowIndex - b.rowIndex || a.x - b.x);
     const stemColors = ["#49ad76", "#46a66f", "#59b880", "#62b58a"];
     const foliageColors = ["#8ac98f", "#6fbd88", "#7ec7a8", "#9ccf7a", "#76bca2"];
-    const stemWidthRange = isDesktop ? [0.45, 0.72] : [0.66, 0.95];
+    const stemWidthRange = isDesktop ? [0.38, 0.62] : [0.62, 0.9];
 
     const decorativeCount = clamp(Math.round(total * 0.62), 3, 7);
     for (let i = 0; i < decorativeCount; i += 1) {
@@ -650,18 +650,17 @@
         x: x + randomBetween(rng, -1.2, 1.2),
         y: y + randomBetween(rng, 6.6, 8.8),
       };
-      const anchorSpread = 6.4 + tier * 1.25;
-      const targetStemLength =
-        randomBetween(rng, 54, 84) +
-        tier * randomBetween(rng, 3.1, 6.1) -
-        edge * randomBetween(rng, 4.2, 7.4);
+      const anchorSpread = 6.2 + tier * 1.12;
+      const stemBaseY = randomBetween(rng, 98.4, 99.4);
       const stemEnd = {
         x: clamp(50 + centered * anchorSpread + randomBetween(rng, -1.8, 1.8), 40, 60),
-        y: clamp(stemStart.y + targetStemLength, 84.2, 99),
+        y: stemBaseY,
       };
+      const stemLength = stemEnd.y - stemStart.y;
+      const bendStrength = clamp(stemLength / 24, 1.1, 2.25);
       const stemControl = {
-        x: (stemStart.x + stemEnd.x) / 2 + randomBetween(rng, -2.6, 2.6),
-        y: clamp((stemStart.y + stemEnd.y) / 2 + randomBetween(rng, 7, 18), 46, 78),
+        x: (stemStart.x + stemEnd.x) / 2 + randomBetween(rng, -2.2, 2.2) * bendStrength,
+        y: clamp(stemStart.y + stemLength * randomBetween(rng, 0.52, 0.66), 46, 86),
       };
 
       const stemGroup = document.createElementNS(svgNs, "g");
@@ -684,8 +683,8 @@
       const leafCount = 1 + Math.floor(rng() * 2);
       const leafSlots =
         leafCount === 1
-          ? [randomBetween(rng, 0.47, 0.64)]
-          : [randomBetween(rng, 0.34, 0.45), randomBetween(rng, 0.58, 0.72)];
+          ? [randomBetween(rng, 0.42, 0.63)]
+          : [randomBetween(rng, 0.32, 0.48), randomBetween(rng, 0.55, 0.75)];
 
       leafSlots.forEach((leafT, leafIndex) => {
         const point = pointOnQuadratic(stemStart, stemControl, stemEnd, leafT);
