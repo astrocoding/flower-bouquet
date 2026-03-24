@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/buket",
+      "destination": "/buket/index.html"
+    },
+    {
+      "source": "/buket/",
+      "destination": "/buket/index.html"
+    },
+    {
+      "source": "/custom",
+      "destination": "/custom.html"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
+    }
+  ]
+}
