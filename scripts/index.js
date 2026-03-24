@@ -519,10 +519,10 @@
     const widthScale = stageWidth >= 1220 ? 1.1 : stageWidth >= 980 ? 1 : stageWidth >= 760 ? 0.9 : 0.82;
     const rowCount = total >= 10 ? 4 : total >= 7 ? 3 : 2;
     const rowProfiles = [
-      { y: 8.8, span: 14.5, scale: 0.87, angle: 10, gap: 6.2, edgeLift: 2.2 },
-      { y: 13.2, span: 18.8, scale: 0.95, angle: 12, gap: 5.6, edgeLift: 2.6 },
-      { y: 18.1, span: 23.6, scale: 1.03, angle: 14, gap: 5.2, edgeLift: 3.1 },
-      { y: 23.3, span: 27.4, scale: 1.09, angle: 16, gap: 4.9, edgeLift: 3.3 },
+      { y: 7.4, span: 16.2, scale: 0.86, angle: 10, gap: 6.6, edgeLift: 2.1 },
+      { y: 13.2, span: 21.2, scale: 0.95, angle: 12, gap: 6.0, edgeLift: 2.8 },
+      { y: 20.2, span: 26.7, scale: 1.04, angle: 14, gap: 5.6, edgeLift: 3.4 },
+      { y: 28.2, span: 31.8, scale: 1.11, angle: 16, gap: 5.2, edgeLift: 3.8 },
     ].slice(0, rowCount);
     const rowWeights =
       rowCount === 2 ? [0.42, 0.58] : rowCount === 3 ? [0.24, 0.34, 0.42] : [0.16, 0.24, 0.28, 0.32];
@@ -591,7 +591,7 @@
       xs.forEach((x) => {
         const centered = (x - 50) / Math.max(span, 1);
         const edge = Math.abs(centered);
-        const y = row.y + edge * row.edgeLift + randomBetween(rng, -0.7, 0.9);
+        const y = row.y + edge * row.edgeLift + randomBetween(rng, -1.0, 1.1);
         placements.push({
           rowIndex,
           x: clamp(x, 24, 76),
@@ -606,7 +606,7 @@
     placements.sort((a, b) => a.rowIndex - b.rowIndex || a.x - b.x);
     const stemColors = ["#49ad76", "#46a66f", "#59b880", "#62b58a"];
     const foliageColors = ["#8ac98f", "#6fbd88", "#7ec7a8", "#9ccf7a", "#76bca2"];
-    const stemWidthRange = isDesktop ? [0.62, 0.92] : [0.8, 1.1];
+    const stemWidthRange = isDesktop ? [0.45, 0.72] : [0.66, 0.95];
 
     const decorativeCount = clamp(Math.round(total * 0.62), 3, 7);
     for (let i = 0; i < decorativeCount; i += 1) {
@@ -650,13 +650,18 @@
         x: x + randomBetween(rng, -1.2, 1.2),
         y: y + randomBetween(rng, 6.6, 8.8),
       };
+      const anchorSpread = 6.4 + tier * 1.25;
+      const targetStemLength =
+        randomBetween(rng, 54, 84) +
+        tier * randomBetween(rng, 3.1, 6.1) -
+        edge * randomBetween(rng, 4.2, 7.4);
       const stemEnd = {
-        x: clamp(50 + centered * (6.2 + tier * 1.1) + randomBetween(rng, -1.9, 1.9), 44, 56),
-        y: randomBetween(rng, 95.2, 99),
+        x: clamp(50 + centered * anchorSpread + randomBetween(rng, -1.8, 1.8), 40, 60),
+        y: clamp(stemStart.y + targetStemLength, 84.2, 99),
       };
       const stemControl = {
-        x: (stemStart.x + stemEnd.x) / 2 + randomBetween(rng, -3.1, 3.1),
-        y: randomBetween(rng, 53, 70),
+        x: (stemStart.x + stemEnd.x) / 2 + randomBetween(rng, -2.6, 2.6),
+        y: clamp((stemStart.y + stemEnd.y) / 2 + randomBetween(rng, 7, 18), 46, 78),
       };
 
       const stemGroup = document.createElementNS(svgNs, "g");
