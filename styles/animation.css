@@ -65,6 +65,40 @@
   }
 }
 
+@keyframes bloom-wind {
+  0%,
+  100% {
+    transform: rotate(calc(var(--wind-amp, 2.2deg) * -1)) translateY(0);
+  }
+  50% {
+    transform: rotate(var(--wind-amp, 2.2deg)) translateY(-1px);
+  }
+}
+
+@keyframes petal-fall {
+  0% {
+    opacity: 0.18;
+    transform: translate3d(0, -8%, 0) rotate(0deg);
+  }
+  10% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.2;
+    transform: translate3d(var(--fall-drift, 16px), 122%, 0) rotate(420deg);
+  }
+}
+
+@keyframes petal-spin {
+  0%,
+  100% {
+    transform-origin: 50% 50%;
+  }
+  50% {
+    transform-origin: 35% 65%;
+  }
+}
+
 .hero,
 .panel {
   animation: rise-in 720ms ease both;
@@ -111,17 +145,11 @@
   animation-delay: var(--stem-delay, 0s);
 }
 
-.bloom-item .flower-token.with-stem {
-  animation: stem-sway 4.2s ease-in-out infinite;
-  animation-delay: calc(var(--bloom-delay) + 0.7s);
-  transform-origin: 50% 100%;
-}
-
 .bloom-item .flower-halo {
   animation: halo-breathe 3.2s ease-in-out infinite;
 }
 
-.message-card .eyebrow {
+.hanging-letter .eyebrow {
   animation: float-gentle 3.6s ease-in-out infinite;
 }
 
@@ -132,5 +160,9 @@
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+
+  .rain-petal {
+    opacity: 0.55 !important;
   }
 }

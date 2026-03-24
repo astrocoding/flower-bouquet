@@ -178,7 +178,7 @@ button:disabled {
   font-size: 0.82rem;
 }
 
-.message-card #messageText {
+.hanging-letter #messageText {
   font-size: 1.04rem;
   white-space: pre-wrap;
   background: rgba(255, 255, 255, 0.68);

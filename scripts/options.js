@@ -80,6 +80,22 @@
       core: "#f4a739",
       halo: "rgba(245, 195, 234, 0.28)",
     },
+    {
+      id: "gardenia",
+      name: "Gardenia",
+      petals: 11,
+      colors: ["#fffaf0", "#f8edd9"],
+      core: "#f2cc80",
+      halo: "rgba(255, 248, 231, 0.32)",
+    },
+    {
+      id: "babysbreath",
+      name: "Baby's Breath",
+      petals: 24,
+      colors: ["#ffffff", "#e8f2ff"],
+      core: "#f5d9a1",
+      halo: "rgba(227, 240, 255, 0.34)",
+    },
   ];
 
   const THEMES = [

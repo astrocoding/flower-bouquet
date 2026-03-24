@@ -63,6 +63,70 @@
     return (Math.atan2(vector.y, vector.x) * 180) / Math.PI;
   }
 
+  function uniqueFlowerIds(counts) {
+    return Object.entries(counts || {})
+      .filter(([, qty]) => Number(qty) > 0)
+      .map(([id]) => id);
+  }
+
+  function buildPetalPalette(counts) {
+    const ids = uniqueFlowerIds(counts);
+    const palette = [];
+
+    ids.forEach((id) => {
+      const flower = lib.getFlower(id);
+      palette.push({ a: flower.colors[0], b: flower.colors[1] });
+      palette.push({ a: flower.colors[1], b: flower.core });
+    });
+
+    if (palette.length > 0) {
+      return palette;
+    }
+
+    return [
+      { a: "#ffd5e3", b: "#ffabc3" },
+      { a: "#fff1d9", b: "#f4c77f" },
+      { a: "#f2ecff", b: "#c7b8ff" },
+    ];
+  }
+
+  function renderPetalRain(container, counts, seedSource) {
+    if (!container) {
+      return;
+    }
+
+    container.innerHTML = "";
+    const palette = buildPetalPalette(counts);
+    const rng = createSeededRandom(`${seedSource}|rain`);
+    const density = window.innerWidth <= 640 ? 18 : 26;
+    const shapes = [
+      "74% 36% 70% 38%",
+      "58% 44% 76% 38%",
+      "66% 42% 62% 46%",
+      "80% 42% 68% 34%",
+    ];
+
+    for (let i = 0; i < density; i += 1) {
+      const petal = document.createElement("span");
+      const pair = palette[Math.floor(rng() * palette.length)];
+      const isAlt = rng() > 0.52;
+      petal.className = isAlt ? "rain-petal alt" : "rain-petal";
+      petal.style.left = `${(rng() * 102 - 1).toFixed(2)}%`;
+      petal.style.top = `${(rng() * 92).toFixed(2)}%`;
+      petal.style.setProperty("--petal-a", pair.a);
+      petal.style.setProperty("--petal-b", pair.b);
+      petal.style.setProperty("--petal-w", `${(rng() * 8 + 8).toFixed(2)}px`);
+      petal.style.setProperty("--petal-h", `${(rng() * 11 + 10).toFixed(2)}px`);
+      petal.style.setProperty("--petal-radius", shapes[Math.floor(rng() * shapes.length)]);
+      petal.style.setProperty("--petal-radius-alt", shapes[Math.floor(rng() * shapes.length)]);
+      petal.style.setProperty("--fall-duration", `${(rng() * 5 + 10).toFixed(2)}s`);
+      petal.style.setProperty("--spin-duration", `${(rng() * 2.8 + 2.5).toFixed(2)}s`);
+      petal.style.setProperty("--fall-delay", `${(rng() * -12).toFixed(2)}s`);
+      petal.style.setProperty("--fall-drift", `${(rng() * 52 - 26).toFixed(2)}px`);
+      container.appendChild(petal);
+    }
+  }
+
   function readQueryParam(query, keys, fallback) {
     const list = Array.isArray(keys) ? keys : [keys];
     for (const key of list) {
@@ -371,11 +435,12 @@
     const messageText = document.getElementById("messageText");
     const bouquetCanvas = document.getElementById("bouquetCanvas");
     const bouquetStemCanvas = document.getElementById("bouquetStemCanvas");
+    const petalRain = document.getElementById("petalRain");
     const bloomMeta = document.getElementById("bloomMeta");
     const editLink = document.getElementById("editLink");
     const copyShareButton = document.getElementById("copyShareButton");
 
-    if (!bouquetCanvas || !bouquetStemCanvas) {
+    if (!bouquetCanvas || !bouquetStemCanvas || !petalRain) {
       return;
     }
 
@@ -398,7 +463,8 @@
     messageText.textContent = message;
 
     const bouquetSeed = [name, from, message, themeId, lib.encodeFlowers(counts)].join("|");
-    renderBouquet(bouquetCanvas, bouquetStemCanvas, counts, bouquetSeed);
+    const redraw = () => renderBouquet(bouquetCanvas, bouquetStemCanvas, petalRain, counts, bouquetSeed);
+    redraw();
 
     const summary = formatSelectionSummary(counts);
     bloomMeta.textContent = `${getTotal(counts)} blooms | ${summary}`;
@@ -423,13 +489,20 @@
         copyShareButton.textContent = originalLabel;
       }, 1600);
     });
+
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(redraw, 120);
+    });
   }
 
-  function renderBouquet(container, stemCanvas, counts, seedSource) {
+  function renderBouquet(container, stemCanvas, rainContainer, counts, seedSource) {
     const svgNs = "http://www.w3.org/2000/svg";
     const flowerIds = lib.expandFlowers(counts);
     container.innerHTML = "";
     stemCanvas.innerHTML = "";
+    renderPetalRain(rainContainer, counts, seedSource);
 
     const total = flowerIds.length;
     if (total === 0) {
@@ -441,36 +514,77 @@
       .map((flowerId, index) => ({ flowerId, sortKey: rng() + index * 0.0001 }))
       .sort((a, b) => a.sortKey - b.sortKey);
 
-    const fanWidth = total <= 6 ? 18 : total <= 8 ? 22 : 25;
+    const stageWidth = container.clientWidth || 900;
+    const widthScale = stageWidth >= 1180 ? 1.08 : stageWidth >= 980 ? 1 : stageWidth >= 760 ? 0.9 : 0.82;
+    const fanWidth = (total <= 6 ? 15 : total <= 8 ? 18 : 21) * widthScale;
     const slots = Array.from({ length: total }, () => randomBetween(rng, -1, 1)).sort(
       (a, b) => a - b
     );
+    const tierCount = total <= 4 ? 2 : total <= 7 ? 3 : 4;
+    const tierPattern = tierCount === 2 ? [1, 0] : tierCount === 3 ? [1, 0, 2] : [1, 0, 2, 3];
+    const tierBaseY = [9.8, 13.6, 18.9, 23.8];
+    const tierScale = [0.9, 0.98, 1.04, 1.09];
+    const stemColors = ["#49ad76", "#46a66f", "#59b880", "#62b58a"];
+    const foliageColors = ["#8ac98f", "#6fbd88", "#7ec7a8", "#9ccf7a", "#76bca2"];
+
+    const decorativeCount = clamp(Math.round(total * 0.95), 4, 9);
+    for (let i = 0; i < decorativeCount; i += 1) {
+      const baseX = randomBetween(rng, 12, 88);
+      const endX = clamp(baseX + randomBetween(rng, -9, 9), 8, 92);
+      const endY = randomBetween(rng, 54, 82);
+      const controlX = (baseX + endX) / 2 + randomBetween(rng, -8, 8);
+      const controlY = randomBetween(rng, 70, 92);
+      const grass = document.createElementNS(svgNs, "path");
+      grass.setAttribute("class", "foliage-path");
+      grass.setAttribute("stroke", foliageColors[Math.floor(rng() * foliageColors.length)]);
+      grass.setAttribute("stroke-width", `${randomBetween(rng, 0.45, 0.9).toFixed(2)}`);
+      grass.setAttribute("d", `M ${baseX.toFixed(2)} 100 Q ${controlX.toFixed(2)} ${controlY.toFixed(2)} ${endX.toFixed(2)} ${endY.toFixed(2)}`);
+      stemCanvas.appendChild(grass);
+
+      if (rng() > 0.72) {
+        const tip = document.createElementNS(svgNs, "ellipse");
+        tip.setAttribute("class", "foliage-tip");
+        tip.setAttribute("cx", endX.toFixed(2));
+        tip.setAttribute("cy", endY.toFixed(2));
+        tip.setAttribute("rx", `${randomBetween(rng, 0.65, 1.4).toFixed(2)}`);
+        tip.setAttribute("ry", `${randomBetween(rng, 1.35, 2.45).toFixed(2)}`);
+        tip.setAttribute("fill", foliageColors[Math.floor(rng() * foliageColors.length)]);
+        tip.setAttribute("transform", `rotate(${randomBetween(rng, -42, 42).toFixed(2)} ${endX.toFixed(2)} ${endY.toFixed(2)})`);
+        stemCanvas.appendChild(tip);
+      }
+    }
 
     orderedFlowers.forEach(({ flowerId }, index) => {
       const centered = total === 1 ? 0 : slots[index];
       const edge = Math.abs(centered);
+      const tier = tierPattern[index % tierPattern.length];
       const arcLift = 1 - edge;
 
-      const x = clamp(50 + centered * fanWidth + randomBetween(rng, -2.8, 2.8), 22, 78);
-      const y = clamp(16 + edge * 8.7 + randomBetween(rng, -1.4, 1.9), 12, 30);
-      const angle = centered * 17 + randomBetween(rng, -5.2, 5.2);
+      const x = clamp(50 + centered * fanWidth + randomBetween(rng, -1.8, 1.8), 28, 72);
+      const y = clamp(
+        tierBaseY[tier] + edge * (tier <= 1 ? 3.2 : 2.1) + randomBetween(rng, -0.9, 0.9),
+        8,
+        31
+      );
+      const angle = centered * (tier <= 1 ? 13 : 17) + randomBetween(rng, -4.4, 4.4);
       const scale =
-        (total <= 6 ? 1.03 : total <= 8 ? 0.97 : 0.92) +
-        arcLift * 0.08 +
-        randomBetween(rng, -0.03, 0.03);
-      const z = 260 + Math.round((50 - y) * 4) + index;
+        (total <= 6 ? 0.98 : total <= 8 ? 0.93 : 0.9) +
+        tierScale[tier] * 0.08 +
+        arcLift * 0.04 +
+        randomBetween(rng, -0.02, 0.02);
+      const z = 240 + tier * 35 + Math.round((50 - y) * 2.6) + index;
 
       const stemStart = {
         x: x + randomBetween(rng, -1.2, 1.2),
         y: y + randomBetween(rng, 6.6, 8.8),
       };
       const stemEnd = {
-        x: clamp(50 + centered * 10 + randomBetween(rng, -5.2, 5.2), 34, 66),
-        y: randomBetween(rng, 94.5, 99),
+        x: clamp(50 + centered * (7 + tier * 1.35) + randomBetween(rng, -2.2, 2.2), 44, 56),
+        y: randomBetween(rng, 95.2, 99),
       };
       const stemControl = {
-        x: (stemStart.x + stemEnd.x) / 2 + randomBetween(rng, -4.8, 4.8),
-        y: randomBetween(rng, 54, 73),
+        x: (stemStart.x + stemEnd.x) / 2 + randomBetween(rng, -3.1, 3.1),
+        y: randomBetween(rng, 53, 70),
       };
 
       const stemGroup = document.createElementNS(svgNs, "g");
@@ -483,10 +597,16 @@
         `M ${stemStart.x} ${stemStart.y} Q ${stemControl.x} ${stemControl.y} ${stemEnd.x} ${stemEnd.y}`
       );
       stemPath.setAttribute("class", "stem-path");
+      stemPath.setAttribute("stroke", stemColors[Math.floor(rng() * stemColors.length)]);
       stemPath.setAttribute("stroke-width", `${randomBetween(rng, 0.95, 1.28).toFixed(2)}`);
       stemGroup.appendChild(stemPath);
 
-      [0.38, 0.62].forEach((leafT, leafIndex) => {
+      const leafCount = 1 + Math.floor(rng() * 2);
+      const leafSlots = Array.from({ length: leafCount }, () => randomBetween(rng, 0.36, 0.75)).sort(
+        (a, b) => a - b
+      );
+
+      leafSlots.forEach((leafT, leafIndex) => {
         const point = pointOnQuadratic(stemStart, stemControl, stemEnd, leafT);
         const tangent = tangentOnQuadratic(stemStart, stemControl, stemEnd, leafT);
         const baseAngle = angleFromVector(tangent);
@@ -497,15 +617,16 @@
         };
         const leafOffset = randomBetween(rng, 0.7, 1.25);
         const leaf = document.createElementNS(svgNs, "ellipse");
-        const direction = leafIndex === 0 ? -1 : 1;
+        const direction = leafIndex % 2 === 0 ? -1 : 1;
         leaf.setAttribute("class", "stem-leaf");
         leaf.setAttribute("cx", (point.x + normal.x * direction * leafOffset).toFixed(2));
         leaf.setAttribute("cy", (point.y + normal.y * direction * leafOffset - 0.55).toFixed(2));
-        leaf.setAttribute("rx", randomBetween(rng, 1.12, 1.65).toFixed(2));
-        leaf.setAttribute("ry", randomBetween(rng, 2.1, 2.85).toFixed(2));
+        leaf.setAttribute("rx", randomBetween(rng, 0.78, 1.52).toFixed(2));
+        leaf.setAttribute("ry", randomBetween(rng, 1.4, 2.55).toFixed(2));
+        leaf.setAttribute("fill", foliageColors[Math.floor(rng() * foliageColors.length)]);
         leaf.setAttribute(
           "transform",
-          `rotate(${(baseAngle + direction * randomBetween(rng, 64, 88)).toFixed(2)} ${(point.x +
+          `rotate(${(baseAngle + direction * randomBetween(rng, 54, 96)).toFixed(2)} ${(point.x +
             normal.x * direction * leafOffset).toFixed(2)} ${(point.y +
             normal.y * direction * leafOffset -
             0.55).toFixed(2)})`
@@ -523,15 +644,21 @@
       bloom.style.setProperty("--bloom-angle", `${angle}deg`);
       bloom.style.setProperty("--bloom-scale", String(scale));
       bloom.style.setProperty("--bloom-delay", `${index * 0.12}s`);
+      bloom.style.setProperty("--wind-amp", `${randomBetween(rng, 1.2, 3.5).toFixed(2)}deg`);
+      bloom.style.setProperty("--wind-duration", `${randomBetween(rng, 3.9, 6.7).toFixed(2)}s`);
+      bloom.style.setProperty("--wind-delay", `${(index * 0.2 + randomBetween(rng, 0, 1.2)).toFixed(2)}s`);
 
-      const size = total <= 6 ? "lg" : total <= 8 ? "md" : "sm";
+      const size = tier === 0 ? "sm" : tier === 1 ? "md" : "lg";
       const flower = lib.createFlowerNode(flowerId, {
         size,
         withStem: false,
         title: lib.getFlower(flowerId).name,
       });
 
-      bloom.appendChild(flower);
+      const sway = document.createElement("div");
+      sway.className = "bloom-sway";
+      sway.appendChild(flower);
+      bloom.appendChild(sway);
       container.appendChild(bloom);
     });
   }

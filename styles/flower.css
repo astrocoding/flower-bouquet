@@ -178,3 +178,25 @@
   width: calc(var(--head-size) * 0.27);
   height: calc(var(--head-size) * 0.37);
 }
+
+.flower-gardenia .petal {
+  width: calc(var(--head-size) * 0.24);
+  height: calc(var(--head-size) * 0.38);
+  border-radius: 88% 52% 80% 46%;
+}
+
+.flower-gardenia .flower-center {
+  width: calc(var(--head-size) * 0.22);
+  height: calc(var(--head-size) * 0.22);
+}
+
+.flower-babysbreath .petal {
+  width: calc(var(--head-size) * 0.11);
+  height: calc(var(--head-size) * 0.23);
+  border-radius: 64% 38% 66% 42%;
+}
+
+.flower-babysbreath .flower-center {
+  width: calc(var(--head-size) * 0.15);
+  height: calc(var(--head-size) * 0.15);
+}

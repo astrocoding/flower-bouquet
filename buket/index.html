@@ -23,22 +23,10 @@
   </head>
   <body data-page="bouquet" data-theme="peach">
     <main class="page page-bouquet">
-      <section class="bouquet-layout">
-        <article class="panel message-card">
-          <p class="eyebrow">A Bouquet For</p>
-          <h1 id="toName">Sahabat Tersayang</h1>
-          <p id="messageText"></p>
-          <p class="signature">Dengan hangat, <span id="fromName"></span></p>
-          <p id="bloomMeta" class="bloom-meta"></p>
-
-          <div class="button-row">
-            <a id="editLink" href="../index.html" class="button-soft">Custom Ulang</a>
-            <button id="copyShareButton" type="button">Copy Link</button>
-          </div>
-        </article>
-
+      <section class="bouquet-layout bouquet-layout-single">
         <article class="panel bouquet-stage-wrap">
           <div class="bouquet-stage" aria-label="Susunan buket bunga">
+            <div id="petalRain" class="petal-rain" aria-hidden="true"></div>
             <svg
               id="bouquetStemCanvas"
               class="bouquet-stem-canvas"
@@ -47,8 +35,20 @@
               aria-hidden="true"
             ></svg>
             <div id="bouquetCanvas" class="bouquet-canvas"></div>
-            <div class="bouquet-wrap"></div>
           </div>
+
+          <section class="hanging-letter">
+            <p class="eyebrow">A Bouquet For</p>
+            <h1 id="toName">Sahabat Tersayang</h1>
+            <p id="messageText"></p>
+            <p class="signature">Dengan hangat, <span id="fromName"></span></p>
+            <p id="bloomMeta" class="bloom-meta"></p>
+
+            <div class="button-row">
+              <a id="editLink" href="../index.html" class="button-soft">Custom Ulang</a>
+              <button id="copyShareButton" type="button">Copy Link</button>
+            </div>
+          </section>
         </article>
       </section>
     </main>
