@@ -515,21 +515,102 @@
       .sort((a, b) => a.sortKey - b.sortKey);
 
     const stageWidth = container.clientWidth || 900;
-    const widthScale = stageWidth >= 1180 ? 1.08 : stageWidth >= 980 ? 1 : stageWidth >= 760 ? 0.9 : 0.82;
-    const fanWidth = (total <= 6 ? 15 : total <= 8 ? 18 : 21) * widthScale;
-    const slots = Array.from({ length: total }, () => randomBetween(rng, -1, 1)).sort(
-      (a, b) => a - b
-    );
-    const tierCount = total <= 4 ? 2 : total <= 7 ? 3 : 4;
-    const tierPattern = tierCount === 2 ? [1, 0] : tierCount === 3 ? [1, 0, 2] : [1, 0, 2, 3];
-    const tierBaseY = [9.8, 13.6, 18.9, 23.8];
-    const tierScale = [0.9, 0.98, 1.04, 1.09];
+    const isDesktop = stageWidth >= 980;
+    const widthScale = stageWidth >= 1220 ? 1.1 : stageWidth >= 980 ? 1 : stageWidth >= 760 ? 0.9 : 0.82;
+    const rowCount = total >= 10 ? 4 : total >= 7 ? 3 : 2;
+    const rowProfiles = [
+      { y: 8.8, span: 14.5, scale: 0.87, angle: 10, gap: 6.2, edgeLift: 2.2 },
+      { y: 13.2, span: 18.8, scale: 0.95, angle: 12, gap: 5.6, edgeLift: 2.6 },
+      { y: 18.1, span: 23.6, scale: 1.03, angle: 14, gap: 5.2, edgeLift: 3.1 },
+      { y: 23.3, span: 27.4, scale: 1.09, angle: 16, gap: 4.9, edgeLift: 3.3 },
+    ].slice(0, rowCount);
+    const rowWeights =
+      rowCount === 2 ? [0.42, 0.58] : rowCount === 3 ? [0.24, 0.34, 0.42] : [0.16, 0.24, 0.28, 0.32];
+    const rowCounts = rowWeights.map((w) => Math.floor(total * w));
+    let allocated = rowCounts.reduce((sum, count) => sum + count, 0);
+    while (allocated < total) {
+      let pick = 0;
+      let best = -Infinity;
+      for (let i = 0; i < rowWeights.length; i += 1) {
+        const score = total * rowWeights[i] - rowCounts[i];
+        if (score > best) {
+          best = score;
+          pick = i;
+        }
+      }
+      rowCounts[pick] += 1;
+      allocated += 1;
+    }
+
+    for (let i = 0; i < rowCounts.length; i += 1) {
+      if (rowCounts[i] === 0) {
+        const donor = rowCounts.findIndex((count) => count > 1);
+        if (donor >= 0) {
+          rowCounts[donor] -= 1;
+          rowCounts[i] = 1;
+        }
+      }
+    }
+
+    const placements = [];
+    rowProfiles.forEach((row, rowIndex) => {
+      const count = rowCounts[rowIndex];
+      const span = row.span * widthScale;
+      const minX = 50 - span;
+      const maxX = 50 + span;
+      const xs = [];
+
+      if (count <= 1) {
+        xs.push(50 + randomBetween(rng, -2.2, 2.2));
+      } else {
+        for (let i = 0; i < count; i += 1) {
+          const t = i / (count - 1);
+          const base = minX + t * (maxX - minX);
+          xs.push(base + randomBetween(rng, -1.4, 1.4));
+        }
+        xs.sort((a, b) => a - b);
+        for (let i = 1; i < xs.length; i += 1) {
+          if (xs[i] - xs[i - 1] < row.gap) {
+            xs[i] = xs[i - 1] + row.gap;
+          }
+        }
+        const overflow = xs[xs.length - 1] - maxX;
+        if (overflow > 0) {
+          for (let i = 0; i < xs.length; i += 1) {
+            xs[i] -= overflow;
+          }
+        }
+        const underflow = minX - xs[0];
+        if (underflow > 0) {
+          for (let i = 0; i < xs.length; i += 1) {
+            xs[i] += underflow;
+          }
+        }
+      }
+
+      xs.forEach((x) => {
+        const centered = (x - 50) / Math.max(span, 1);
+        const edge = Math.abs(centered);
+        const y = row.y + edge * row.edgeLift + randomBetween(rng, -0.7, 0.9);
+        placements.push({
+          rowIndex,
+          x: clamp(x, 24, 76),
+          y: clamp(y, 7.5, 33),
+          centered,
+          scale: row.scale + randomBetween(rng, -0.018, 0.02),
+          angle: centered * row.angle + randomBetween(rng, -3.6, 3.6),
+        });
+      });
+    });
+
+    placements.sort((a, b) => a.rowIndex - b.rowIndex || a.x - b.x);
     const stemColors = ["#49ad76", "#46a66f", "#59b880", "#62b58a"];
     const foliageColors = ["#8ac98f", "#6fbd88", "#7ec7a8", "#9ccf7a", "#76bca2"];
+    const stemWidthRange = isDesktop ? [0.62, 0.92] : [0.8, 1.1];
 
-    const decorativeCount = clamp(Math.round(total * 0.95), 4, 9);
+    const decorativeCount = clamp(Math.round(total * 0.62), 3, 7);
     for (let i = 0; i < decorativeCount; i += 1) {
-      const baseX = randomBetween(rng, 12, 88);
+      const baseX = rng() > 0.5 ? randomBetween(rng, 7, 24) : randomBetween(rng, 76, 93);
       const endX = clamp(baseX + randomBetween(rng, -9, 9), 8, 92);
       const endY = randomBetween(rng, 54, 82);
       const controlX = (baseX + endX) / 2 + randomBetween(rng, -8, 8);
@@ -555,31 +636,22 @@
     }
 
     orderedFlowers.forEach(({ flowerId }, index) => {
-      const centered = total === 1 ? 0 : slots[index];
+      const placement = placements[index] || placements[placements.length - 1];
+      const centered = placement.centered;
       const edge = Math.abs(centered);
-      const tier = tierPattern[index % tierPattern.length];
-      const arcLift = 1 - edge;
-
-      const x = clamp(50 + centered * fanWidth + randomBetween(rng, -1.8, 1.8), 28, 72);
-      const y = clamp(
-        tierBaseY[tier] + edge * (tier <= 1 ? 3.2 : 2.1) + randomBetween(rng, -0.9, 0.9),
-        8,
-        31
-      );
-      const angle = centered * (tier <= 1 ? 13 : 17) + randomBetween(rng, -4.4, 4.4);
-      const scale =
-        (total <= 6 ? 0.98 : total <= 8 ? 0.93 : 0.9) +
-        tierScale[tier] * 0.08 +
-        arcLift * 0.04 +
-        randomBetween(rng, -0.02, 0.02);
-      const z = 240 + tier * 35 + Math.round((50 - y) * 2.6) + index;
+      const tier = placement.rowIndex;
+      const x = placement.x;
+      const y = placement.y;
+      const angle = placement.angle;
+      const scale = placement.scale;
+      const z = 220 + tier * 32 + Math.round((50 - y) * 2.2) + index;
 
       const stemStart = {
         x: x + randomBetween(rng, -1.2, 1.2),
         y: y + randomBetween(rng, 6.6, 8.8),
       };
       const stemEnd = {
-        x: clamp(50 + centered * (7 + tier * 1.35) + randomBetween(rng, -2.2, 2.2), 44, 56),
+        x: clamp(50 + centered * (6.2 + tier * 1.1) + randomBetween(rng, -1.9, 1.9), 44, 56),
         y: randomBetween(rng, 95.2, 99),
       };
       const stemControl = {
@@ -598,13 +670,17 @@
       );
       stemPath.setAttribute("class", "stem-path");
       stemPath.setAttribute("stroke", stemColors[Math.floor(rng() * stemColors.length)]);
-      stemPath.setAttribute("stroke-width", `${randomBetween(rng, 0.95, 1.28).toFixed(2)}`);
+      stemPath.setAttribute(
+        "stroke-width",
+        `${randomBetween(rng, stemWidthRange[0], stemWidthRange[1]).toFixed(2)}`
+      );
       stemGroup.appendChild(stemPath);
 
       const leafCount = 1 + Math.floor(rng() * 2);
-      const leafSlots = Array.from({ length: leafCount }, () => randomBetween(rng, 0.36, 0.75)).sort(
-        (a, b) => a - b
-      );
+      const leafSlots =
+        leafCount === 1
+          ? [randomBetween(rng, 0.47, 0.64)]
+          : [randomBetween(rng, 0.34, 0.45), randomBetween(rng, 0.58, 0.72)];
 
       leafSlots.forEach((leafT, leafIndex) => {
         const point = pointOnQuadratic(stemStart, stemControl, stemEnd, leafT);
@@ -617,12 +693,13 @@
         };
         const leafOffset = randomBetween(rng, 0.7, 1.25);
         const leaf = document.createElementNS(svgNs, "ellipse");
-        const direction = leafIndex % 2 === 0 ? -1 : 1;
+        const outward = centered >= 0 ? 1 : -1;
+        const direction = leafIndex % 2 === 0 ? outward : -outward;
         leaf.setAttribute("class", "stem-leaf");
         leaf.setAttribute("cx", (point.x + normal.x * direction * leafOffset).toFixed(2));
         leaf.setAttribute("cy", (point.y + normal.y * direction * leafOffset - 0.55).toFixed(2));
-        leaf.setAttribute("rx", randomBetween(rng, 0.78, 1.52).toFixed(2));
-        leaf.setAttribute("ry", randomBetween(rng, 1.4, 2.55).toFixed(2));
+        leaf.setAttribute("rx", randomBetween(rng, 0.72, 1.26).toFixed(2));
+        leaf.setAttribute("ry", randomBetween(rng, 1.25, 2.2).toFixed(2));
         leaf.setAttribute("fill", foliageColors[Math.floor(rng() * foliageColors.length)]);
         leaf.setAttribute(
           "transform",
